@@ -105,6 +105,8 @@ The conservative correction is also analysed directly through the difference bet
 
 This repository is an experimental research implementation. The mathematical construction is documented in [METHOD.md](METHOD.md).
 
+A detailed discussion of the current synthetic and photographic benchmark, including cases where classical methods perform better, is available in [RESULTS.md](RESULTS.md).
+
 The complete benchmark code used during development is being prepared for publication here together with a small runnable reference implementation.
 
 ## Related concepts
