@@ -2,7 +2,7 @@
 
 These results are preliminary and describe the current experimental implementation, not a universal ranking of image resamplers.
 
-The benchmark contained **17 methods**, **59 transforms**, **4 images/scenes** and **3162 result rows**. The main synthetic scenes have known geometry and a separately rendered reference; one real photograph is used for cumulative-resampling checks. The source scenes are quantized to 8-bit sRGB before reconstruction, so the source raster itself already differs slightly from the unquantized scene reference.
+The benchmark contained **17 methods**, **59 transforms**, **4 images/scenes** and **3162 result rows**. The main synthetic scenes have known geometry and a separately rendered reference; one real photograph is used for cumulative-resampling checks. A separate photographic run with a high-resolution reference is described in section 14. The source scenes are quantized to 8-bit sRGB before reconstruction, so the source raster itself already differs slightly from the unquantized scene reference.
 
 The report aggregates many different properties. A method can therefore be better by one criterion and worse by another. That is expected and is useful: the goal is to understand what the mesh representation preserves, not to force a single method to win every test.
 
@@ -397,7 +397,100 @@ This makes **m13zf a particularly interesting practical operating point** in the
 
 m09z is cheaper still and remains strong, though final-grid calibration improves several properties.
 
-## 14. What the benchmark currently supports
+## 14. Photographs with a high-resolution reference
+
+A second, separate run tested two real images: a broadcast-style test card and a photographic film poster with text and thin graphic lines. The poster is used only as a local test image and is not redistributed. The run contained **17 methods**, **34 transforms** and **1156 result rows**.
+
+Real photographs normally have no ground truth. Here one was constructed from the high-resolution originals:
+
+```text
+high-resolution original (6144×4608 test card, 1206×1786 poster)
+→ exact k×k box average in linear light (k = 4 and 2)
+→ 8-bit sRGB source (1536×1152, 603×893)
+→ resampled by every method
+```
+
+The reference for any transform is the **high-resolution original integrated exactly over the same transformed output-pixel footprint**. At identity this reference reproduces the source to 3·10⁻¹⁶ before quantization. The reference is therefore the real image content, not another resampler, although its own resolution is finite. It has k× the source resolution, so the 3× upscale of the test card is close to that limit.
+
+### 14.1 Overall
+
+Mean linear PSNR over all forward transforms except identity:
+
+| Image | m13zf | m41zf | m09z | bicubic | Lanczos-3 | box | m09 (no Z) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| test card | **35.61** | **35.62** | 35.51 | 34.27 | 34.25 | 34.30 | 31.44 |
+| poster | **37.33** | **37.33** | 37.04 | 36.81 | 36.64 | 36.21 | 34.91 |
+
+On both photographs the final-grid calibrated meshes have the highest PSNR, about +1.3 dB (test card) and +0.5 dB (poster) above bicubic and Lanczos-3. This differs from the blurred synthetic scenes (section 6), where Lanczos led.
+
+`m13zf` and `m41zf` are practically identical here, while `m13zf` renders about 2.5× faster. This supports `m13zf` as the default operating point (section 13).
+
+### 14.2 Rotation
+
+Linear PSNR over 0.5°–89° (15 angles, mean of both images):
+
+| Method | Mean PSNR dB | Range dB |
+|---|---:|---:|
+| m41zf | **35.686** | 0.181 |
+| m13zf | 35.675 | 0.180 |
+| m25zf | 35.669 | 0.179 |
+| bicubic | 35.574 | 0.173 |
+| m09z | 35.538 | 0.200 |
+| Lanczos-3 | 35.522 | **0.153** |
+| box | 34.499 | 0.227 |
+| m09 | 33.750 | 0.127 |
+
+The calibrated meshes are ahead at **every** tested angle, by about 0.1–0.15 dB over bicubic and Lanczos. The angular variation of all good methods is small and similar, with no angle-specific failure.
+
+### 14.3 Scaling
+
+| Scale | m41zf | m13zf | m09z | bicubic | Lanczos-3 | box |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.50× | **56.38** | 56.38 | 56.38 | 34.87 | 32.57 | 55.00 |
+| 0.75× | **38.69** | 38.62 | 38.62 | 36.90 | 36.23 | 36.84 |
+| 1.5× | 32.07 | 32.00 | 31.74 | 32.04 | **32.27** | 30.73 |
+| 2× | 31.73 | 31.77 | 31.01 | 31.81 | **31.97** | 30.30 |
+| 3× | 29.73 | **29.86** | 29.32 | 29.41 | 29.53 | 27.98 |
+
+- **Downscaling** is a clear strength. At 0.75×, a non-aligned factor, the calibrated meshes lead by about 1.7 dB over bicubic and 2.4 dB over Lanczos. The point-sampling kernels alias, while the area-conserving mesh does not.
+- **Moderate upscaling** (1.5–2×): Lanczos-3 is ahead by about 0.2–0.3 dB, and m13zf and m41zf are level with bicubic.
+- **3× upscaling**: m13zf is best, unlike the synthetic benchmark where Lanczos led at every magnification. Because of the finite reference resolution, this single point should be confirmed on more images.
+
+Combined rotation + upscaling (10°/30° × 1.5/2) gives essentially a tie: m41zf 31.77, bicubic 31.76, m13zf 31.75 dB, with Lanczos-3 slightly ahead at 31.96 dB.
+
+### 14.4 Colour and overshoot
+
+| Metric | Image | m13zf | m09z | bicubic | Lanczos-3 | box |
+|---|---|---:|---:|---:|---:|---:|
+| mean ΔE00 | test card | 0.563 | 0.563 | 0.589 | 0.700 | **0.420** |
+| mean ΔE00 | poster | **0.996** | 1.037 | 1.047 | 1.131 | 1.000 |
+| overshoot (fraction of channel values outside [0,1]) | test card | 1.0 % | 1.1 % | 1.0 % | 1.5 % | 0 % |
+| overshoot | poster | 0.5 % | 0.6 % | 0.4 % | 0.8 % | 0 % |
+
+- The chroma ratio of all calibrated meshes is 1.000 on both images, so there is no saturation loss.
+- The uncalibrated m09 again loses sharpness: its gradient-energy ratio is 0.72–0.76, against 0.93 for m13zf.
+- Box resampling has the lowest ΔE on the test card: it never overshoots, and the card is dominated by large flat colour areas with hard edges. Among methods that preserve sharpness, m13zf has the lowest colour error on both images, and its overshoot is lower than Lanczos-3.
+
+### 14.5 Repeated rasterization and the Z-difference field
+
+The repeated-rasterization stress test (section 12) behaves as on synthetic scenes:
+
+| Test | Image | m13zf | m09z | bicubic | Lanczos-3 |
+|---|---|---:|---:|---:|---:|
+| rotate + inverse | test card | 34.59 | 35.40 | 36.12 | **41.38** |
+| rotate + inverse | poster | 36.26 | 36.96 | 37.55 | **40.11** |
+| 12 × 30° | test card | 28.48 | 28.58 | 29.16 | **33.54** |
+| 12 × 30° | poster | 31.06 | 31.63 | 32.15 | **35.25** |
+
+This again argues for composing transforms on the continuous mesh and rasterizing once. The demo's `--repeat` option shows the difference directly.
+
+The calibrated-minus-uncalibrated field is Laplacian-like on photographs too (−Laplacian correlation 0.77–0.80). Its transform consistency is 0.997 for m13zf and 0.999 for m41zf, against 0.98 for the 9-node m09z. This matches the synthetic result in section 10.
+
+### 14.6 Reading
+
+With a reference derived from real high-resolution content, the final-grid calibrated mesh is the most accurate method tested for arbitrary-angle rotation and for downscaling on both photographs. It keeps colour and saturation, and it overshoots less than Lanczos-3. Lanczos-3 remains better for moderate upscaling and much better under repeated re-rasterization. Two images are not a representative photographic corpus, so section 17.4 still applies.
+
+## 15. What the benchmark currently supports
 
 The present evidence supports the following claims:
 
@@ -407,10 +500,11 @@ The present evidence supports the following claims:
 4. Calibration on the final refined mesh gives a measurable improvement over inheriting a correction from the original 9-node Q2.
 5. Fine-grid correction behaves like a highly transform-consistent Laplacian-like detail field.
 6. The calibrated mesh is especially competitive on sharp synthetic content, downscaling, colour preservation and geometric stability.
-7. Lanczos remains stronger in aggregate PSNR, already blurred content, strong upscaling, several edge-frequency metrics and repeated rasterization.
+7. Lanczos remains stronger in aggregate PSNR on the synthetic set, already blurred content, strong upscaling, several edge-frequency metrics and repeated rasterization.
 8. The highest-resolution mesh is not automatically the best engineering choice; m13zf/m25zf may provide a better quality-cost trade-off.
+9. On two photographs with a high-resolution reference, the final-grid calibrated mesh has the highest PSNR for rotation at every tested angle and for downscaling, with no saturation loss (section 14).
 
-## 15. What the benchmark does **not** establish
+## 16. What the benchmark does **not** establish
 
 The current experiments do not yet establish that:
 
@@ -424,13 +518,13 @@ The current experiments do not yet establish that:
 
 Those require further testing and literature review.
 
-## 16. Recommended next experiments
+## 17. Recommended next experiments
 
-### 16.1 Fix rank ties
+### 17.1 Fix rank ties
 
 Use numerical tolerances so mathematically equivalent methods receive equal rank. Prefer effect sizes or normalized errors over raw ordinal ranks when differences are tiny.
 
-### 16.2 More scale factors
+### 17.2 More scale factors
 
 Add irregular scales such as:
 
@@ -440,11 +534,11 @@ Add irregular scales such as:
 
 to avoid grid-alignment special cases.
 
-### 16.3 More analytic edge phases
+### 17.3 More analytic edge phases
 
 Move the same line/edge through many subpixel offsets. This can reveal grid-phase dependence separately from angle dependence.
 
-### 16.4 More natural images
+### 17.4 More natural images
 
 Use a larger, legally distributable image set with:
 
@@ -457,15 +551,15 @@ Use a larger, legally distributable image set with:
 - already blurred images,
 - sensor noise.
 
-### 16.5 Keep the mesh between transforms
+### 17.5 Keep the mesh between transforms
 
 Compare cumulative operations when all transforms are composed in continuous coordinates and rasterization occurs only once at the end.
 
-### 16.6 Optimize the representation
+### 17.6 Optimize the representation
 
 Investigate whether exact Q2 integration or a compact equivalent formulation can reproduce the best final-grid-calibrated behaviour without storing 41 explicit points per source pixel.
 
-### 16.7 Literature comparison
+### 17.7 Literature comparison
 
 Compare explicitly against:
 
@@ -478,7 +572,7 @@ Compare explicitly against:
 
 Only after that should novelty claims be considered.
 
-## 17. Current interpretation
+## 18. Current interpretation
 
 The most interesting result is not simply that one mesh variant obtains the lowest composite rank.
 
