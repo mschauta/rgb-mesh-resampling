@@ -292,13 +292,17 @@ The raw meshes do not return the source raster at identity because their area av
 
 This test is a direct demonstration of what the Z calibration changes: it converts the point-centred reconstruction into an area-consistent representation.
 
-## 12. Repeated rasterization is a weakness
+## 12. Repeated rasterization stress test
 
-The cumulative test repeatedly performs:
+The cumulative test deliberately performs:
 
 ```text
 transform → rasterize → reconstruct → transform → rasterize → ...
 ```
+
+This is **not the intended use of the mesh representation**. The design goal is to construct the continuous representation once, keep it as the image model, compose subsequent coordinate transforms, and rasterize only when an output image is actually required.
+
+Repeated rasterization is nevertheless a useful stress test because every resampling method loses information when forced through repeated raster → reconstruction → raster cycles.
 
 For 12 × 30° rotation, synthetic-scene PSNR is approximately:
 
@@ -322,16 +326,18 @@ m41zf      50.61 dB
 m09        41.67 dB
 ```
 
-Thus the current mesh family does **not** solve repeated-resampling degradation when it is rebuilt from a newly rasterized image after every step.
+These numbers therefore compare **degradation rates under repeated re-rasterization**, not the core grid-independent representation itself. Lanczos degrades least in this artificial repeated-resampling regime among the tested methods; all methods degrade.
 
-This is conceptually important. The representation is intended to reduce dependence on a raster grid; repeatedly collapsing it back to a raster throws away that advantage.
+The intended pipeline is instead:
 
-A separate future experiment should distinguish:
+```text
+source raster
+→ continuous mesh (once)
+→ compose T1, T2, ..., Tn in continuous coordinates
+→ rasterize once to the requested output grid
+```
 
-1. repeated rasterize/reconstruct cycles;
-2. keeping one continuous mesh and composing coordinate transforms until the final rasterization.
-
-The present report tests the first case.
+A dedicated benchmark should compare this intended mesh-preserving pipeline against repeated rasterization. Earlier coordinate-composition experiments already indicate that avoiding intermediate rasterization can reduce round-trip error to near floating-point precision for reversible transforms, but that result should be reproduced inside the unified benchmark before being treated as part of the formal result set.
 
 ## 13. Speed and memory
 
