@@ -216,6 +216,23 @@ Lanczos-3 is also excellent on this metric (~0.988).
 
 The interpretation is that area calibration restores much of the contrast/colour energy lost by the uncorrected smooth mesh.
 
+### Visual character: calibrated versus uncalibrated
+
+This numerical “loss” in the raw mesh should not automatically be interpreted as an undesirable image.
+
+On real-image crops, the uncalibrated mesh variants (`m09`, `m13`, `m25`, `m41`) often produce visibly smoother and gentler edge transitions than sharper classical kernels. Fine diagonal text and high-contrast contours can look less hard or less outlined. If that softer rendering is the desired visual style, an uncalibrated mesh can be a reasonable intentional choice.
+
+The Z-calibrated family has a different goal. `m09z` and the inherited refinements `m09z_13`, `m09z_25`, `m09z_41` restore the area discrepancy of the 9-node field; the final-grid variants `m13zf`, `m25zf`, `m41zf` perform the corresponding conservation step on the refined representation. In both cases the practical effect is to restore local edge/thin-feature contrast that the smooth reconstruction otherwise attenuates.
+
+A useful practical distinction is therefore:
+
+```text
+uncalibrated mesh → softer / smoother edge character
+Z-calibrated mesh → stronger area and local-contrast preservation
+```
+
+Neither description is a universal perceptual-quality verdict. The benchmark rewards calibrated variants on colour, thin-feature and geometry metrics, while a viewer may still prefer the softer uncalibrated appearance on some photographs.
+
 ## 8. Geometry
 
 The best overall deformation RMS values are clustered tightly:
