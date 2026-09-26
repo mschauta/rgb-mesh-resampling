@@ -4,6 +4,8 @@ Experimental image reconstruction and resampling based on a continuous RGB mesh 
 
 The project explores a simple idea: instead of treating a raster pixel as a coloured square, treat its RGB value as a sample at the pixel centre, reconstruct a continuous local surface, and resample transformed output pixels by integrating that surface over their source-space footprints.
 
+![RGB Mesh Resampling infographic: from pixel-centre RGB samples through channel meshes and refinement to grid-independent resampling.](docs/images/english.png)
+
 ## Goal: make the image independent of its original pixel grid
 
 The long-term goal is to separate the **image representation** from the square raster on which it happened to be sampled. The source pixel grid is used only as the initial measurement lattice. A simple representation transform converts pixel colours into coloured points, reconstructs shared edges and a continuous mesh, optionally recalibrates the mesh so each source pixel retains its measured area colour, and then allows the field to be refined without returning to the original raster.
