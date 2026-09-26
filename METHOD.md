@@ -135,6 +135,25 @@ It does not prove that the corrected intra-pixel shape is the unique or physical
 
 Therefore the project treats raw Q2 and conservative Q2 as separate models.
 
+### 5.1 Edge-contrast interpretation
+
+The area residual
+
+```text
+P - A
+```
+
+is concentrated mainly around edges, thin structures and other high-frequency image content. The resulting correction is therefore visually similar to a localized high-pass / Laplacian-like contrast-restoration field.
+
+This gives the two reconstruction families a deliberately different visual character:
+
+- without Z calibration, the reconstructed mesh is smoother and typically produces softer, finer-looking transitions;
+- with Z calibration, local contrast removed by that smoothing is pushed back into the interior degrees of freedom so that the source pixel's area colour is preserved.
+
+The purpose of Z calibration is therefore best described as **area conservation with edge/feature contrast restoration**, not as generic sharpening. The correction is derived from the reconstruction's own area error rather than from an externally chosen sharpening kernel.
+
+A softer uncalibrated result can still be desirable as an aesthetic choice. The calibrated and uncalibrated fields should therefore be treated as two useful reconstruction modes rather than simply “correct” and “incorrect” versions.
+
 ## 6. Transformation and output sampling
 
 The reconstructed field is independent of the output pixel grid.
