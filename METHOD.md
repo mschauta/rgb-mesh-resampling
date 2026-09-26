@@ -1,5 +1,24 @@
 # Method
 
+## Representation goal
+
+The method is designed to make the reconstructed image independent of the particular pixel grid on which the source was sampled. The raster is treated as an input measurement lattice, not as the permanent geometry of the image.
+
+The representation pipeline is:
+
+```text
+pixel grid
+→ pixel colours
+→ coloured point samples
+→ reconstructed vertices and edges
+→ continuous mesh
+→ optional area calibration from the original pixel colours
+→ refinement by adding further points and edges
+→ sampling or integration onto an arbitrary output grid
+```
+
+The important transition is from **grid-bound pixel values** to a **continuous colour field**. After that transition, transforms act on coordinates and output-pixel footprints; they do not require the image to remain tied to the source raster.
+
 ## 1. Raster interpretation
 
 Let the source raster contain linear-light colour samples `P[i,j]`.
