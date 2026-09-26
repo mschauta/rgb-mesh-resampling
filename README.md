@@ -21,6 +21,8 @@ pixel grid
 → arbitrary output grid or pixel footprint
 ```
 
+![Conceptual RGB mesh resampling pipeline: the source pixel grid is separated from the RGB channel information, which is reconstructed as continuous surfaces, transformed independently of the original raster, and sampled back onto an output grid.](docs/images/RGB%20mesh%20resampling.png)
+
 Once the continuous field exists, the original square grid is no longer privileged: the same image model can be integrated or sampled onto square, rotated, scaled, or other output grids and footprints.
 
 The code and experiments are intended to make the method reproducible and to compare it against standard resampling methods without claiming that any one reconstruction is the unique ground truth for real photographs.
