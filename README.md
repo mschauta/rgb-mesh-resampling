@@ -87,6 +87,12 @@ The repository also studies denser explicit representations of the same reconstr
 - 25-node subdivided Q2 representation,
 - 41-node centre-fan triangulation.
 
+The numbers refer to the **explicit point set used inside one original pixel cell**. The 9-point model is the basic 3×3 Q2 layout; 13 adds the four quarter-cell centres; 25 forms a regular 5×5 quarter-grid; and 41 adds the centre of each of the 16 refined subcells to that 25-point grid.
+
+![Point layouts used by the 9-, 13-, 25- and 41-point RGB mesh variants.](docs/images/RGB%20nodes.png)
+
+These are not four different source images or four levels of recovered detail. They are different explicit representations or refinements of the same local reconstructed field. In particular, the 25-point Q2 subdivision of a fixed 9-point Q2 surface adds sampling density but no new information.
+
 A key distinction is kept between:
 
 1. **subdivision of a fixed reconstructed field**, and
