@@ -39,6 +39,12 @@ Each source pixel cell is reconstructed as a 9-node biquadratic (`Q2`) patch:
 
 Corner nodes are reconstructed from the four surrounding pixel-centre samples. Edge-midpoint nodes are reconstructed from the two adjacent pixel centres and the two edge endpoints.
 
+The diagram below shows the geometric idea on a 2×2 neighbourhood. The four raster values are first treated as samples located at the **pixel centres**, rather than as four filled squares. From those samples, shared corner and edge-midpoint values are reconstructed, creating the control structure of the continuous mesh.
+
+![From a 2×2 pixel grid to reconstructed corner points, edge midpoints and the resulting continuous mesh.](docs/images/RGB%20mesh.png)
+
+The surface on the right is a visual analogy: one colour channel can be drawn as a height field, where sample value becomes height. In the actual implementation there is no single scalar “image height”; the same geometry carries the linear-light **R, G and B values independently** (and premultiplied alpha when present). Repeating this local construction across the image produces a continuous field whose geometry is no longer tied to the original pixel-square boundaries.
+
 The resulting 3×3 node set defines a tensor-product quadratic surface in linear-light RGB.
 
 Two main variants are studied:
