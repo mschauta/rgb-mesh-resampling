@@ -23,3 +23,6 @@ generated_tests/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Demo output
+demo_output/
