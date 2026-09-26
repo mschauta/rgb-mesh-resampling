@@ -86,6 +86,16 @@ A key distinction is kept between:
 
 The 25-node Q2 subdivision of a fixed Q2 surface is numerically equivalent to the original 9-node Q2 representation.
 
+## Choosing calibrated or uncalibrated mesh
+
+Z / area calibration is not only a conservation constraint; in practice it also restores local edge and thin-feature contrast that the smooth uncalibrated mesh tends to reduce.
+
+- **Calibrated variants** (`m09z`, and the final-grid `m13zf` / `m25zf` / `m41zf`) are intended when preserving source-pixel area colour, edge contrast and thin-feature energy is the priority.
+- **Uncalibrated variants** (`m09`, `m13`, `m41`; the experimental `m25` is equivalent to `m09`) produce a visibly softer, smoother edge character. This can be aesthetically preferable when a gentle anti-aliased look is wanted rather than maximum local contrast.
+- The experimental inherited-Z refinements `m09z_13`, `m09z_25` and `m09z_41` refine a 9-node calibrated field. `m09z_25` is exactly equivalent to `m09z` and is therefore not exposed separately by the demo.
+
+So “uncalibrated” should not be read as “bad”: it is a different reconstruction choice. Calibration moves the result toward area/contrast preservation; leaving it off deliberately keeps the naturally smoother mesh response.
+
 ## Validation
 
 The experimental framework uses both real images and analytically generated scenes with known geometry. Measurements include:
