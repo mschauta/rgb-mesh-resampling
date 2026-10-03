@@ -6,6 +6,12 @@ The project explores a simple idea: instead of treating a raster pixel as a colo
 
 ![RGB Mesh Resampling infographic: from pixel-centre RGB samples through channel meshes and refinement to grid-independent resampling.](docs/images/english.png)
 
+## Scope of reconstruction
+
+A digital photograph is a finite, generally lossy measurement of a physical scene. Optical blur, sensor sampling, noise, quantization, and image processing discard or combine information, so the original scene cannot in general be uniquely recovered from its pixels. RGB Mesh does not restore details that the recorded image no longer contains.
+
+Instead, it estimates a continuous colour field between pixel centres from relationships among neighbouring samples. The inferred intermediate colours are values of a reconstruction model, not measurements of otherwise hidden scene detail. The result is therefore neither a complete nor a uniquely correct reconstruction of reality. Its mathematical precision lies in the explicit interpolation model and the integration of that model over output-pixel areas; in conservative variants, the source-pixel area constraint is also enforced to numerical precision.
+
 ## Goal: make the image independent of its original pixel grid
 
 The long-term goal is to separate the **image representation** from the square raster on which it happened to be sampled. The source pixel grid is used only as the initial measurement lattice. A simple representation transform converts pixel colours into coloured points, reconstructs shared edges and a continuous mesh, optionally recalibrates the mesh so each source pixel retains its measured area colour, and then allows the field to be refined without returning to the original raster.
@@ -205,17 +211,31 @@ Notes:
 - Memory grows with the number of mesh points: about 250 bytes per source pixel for `m13zf` and about 1 kB for `m41zf` in float64. `--float32` halves this.
 - Tests: `python -m pytest`.
 
-## Related concepts
+## Related work and independent development
 
-The method is related to, but not identical with:
+This implementation was developed experimentally before the works below were consulted. A subsequent literature search found substantial prior art for its individual ingredients. Independent development does not make those ingredients novel, so the project should be read as a particular synthesis and experimental application rather than as a claim to have invented continuous reconstruction, Q2 interpolation, conservative remapping, or signed high-pass representations.
 
-- cell-centred to nodal reconstruction,
-- Q2 finite-element interpolation,
-- conservative remapping / finite-volume ideas,
-- reconstruction filtering,
-- area / footprint resampling.
+Relevant precedents include:
 
-A literature comparison is still needed before making any claim of novelty.
+- treating pixels as samples from which a continuous image must be reconstructed: [Smith (1995)](https://www.cs.princeton.edu/courses/archive/spr05/cos426/papers/smith95b.pdf), [Mitchell and Netravali (1988)](https://doi.org/10.1145/378456.378514), and [Unser (1999)](https://doi.org/10.1109/79.799930);
+- filtering and resampling over transformed pixel footprints: [Fant (1986)](https://doi.org/10.1109/MCG.1986.276613) and [Heckbert (1989)](https://www2.eecs.berkeley.edu/Pubs/TechRpts/1989/5504.html);
+- conservative polynomial remapping between finite-element and finite-volume representations: [Ullrich and Taylor (2015)](https://doi.org/10.1175/MWR-D-14-00343.1);
+- exact-area image resampling with a biquadratic surface whose source-cell averages match the pixels: [Robidoux et al. (2008)](https://doi.org/10.1007/978-3-540-69812-8_9);
+- globally continuous polynomial reconstruction from shared boundary point values and a prescribed cell average: the Cartesian [Active Flux](https://arxiv.org/abs/1812.01612) construction;
+- signed Laplacian/high-pass image representations: [Marr and Hildreth (1980)](https://doi.org/10.1098/rspb.1980.0020) and [Burt and Adelson (1983)](https://doi.org/10.1109/TCOM.1983.1095851);
+- structure-adaptive alternatives such as [new edge-directed interpolation](https://doi.org/10.1109/83.951537).
+
+The closest image-processing precedent found so far is the biquadratic average-matching histospline method of Robidoux et al. It begins with pixel values interpreted as cell averages and constructs a global natural histospline. RGB Mesh instead begins with the explicit point-sample interpretation, derives shared corner and edge nodes locally, optionally imposes the same source value as a cell-area constraint, supports final-grid recalibration, and integrates the resulting piecewise field over clipped affine output-pixel footprints.
+
+The Active Flux literature is an especially close mathematical parallel to the conservative step: shared boundary point values and a prescribed cell average determine a continuous biquadratic reconstruction. Its purpose is the evolution of conservation laws, while this project derives the boundary values from neighbouring RGB samples and uses the reconstruction as a static image representation.
+
+No source found in this initial review describes the complete image-processing pipeline in exactly this form. That observation is not a proof of novelty, and the review is not exhaustive. A more detailed comparison is included in [METHOD.md](METHOD.md#11-related-work-scope-and-novelty).
+
+## Contributors and AI assistance
+
+This project was developed through substantial human–AI collaboration. OpenAI Codex and Anthropic Claude contributed to mathematical reasoning and verification, implementation, testing, benchmark design, analysis, literature research, and documentation. Their role was materially broader than language or copy editing.
+
+The research direction, modelling decisions, experimental interpretation, final verification, and responsibility for publication remain with [mschauta](https://github.com/mschauta). See [CONTRIBUTORS.md](CONTRIBUTORS.md) for the detailed attribution and its relation to GitHub's automatically generated contributor graph.
 
 ## License
 

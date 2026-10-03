@@ -514,9 +514,9 @@ The current experiments do not yet establish that:
 - the current quality-rank ordering is statistically robust;
 - the current Python/Numba speed represents an optimized implementation;
 - the method performs like super-resolution or recovers information absent from the source;
-- the overall construction is novel relative to the full image-processing literature.
+- the complete construction is novel relative to the full image-processing and numerical-remapping literature.
 
-Those require further testing and literature review.
+Those require further testing. An initial related-work review is now included in [METHOD.md](METHOD.md#11-related-work-scope-and-novelty), but it is not exhaustive and does not establish novelty.
 
 ## 17. Recommended next experiments
 
@@ -559,18 +559,9 @@ Compare cumulative operations when all transforms are composed in continuous coo
 
 Investigate whether exact Q2 integration or a compact equivalent formulation can reproduce the best final-grid-calibrated behaviour without storing 41 explicit points per source pixel.
 
-### 17.7 Literature comparison
+### 17.7 Extend the literature comparison
 
-Compare explicitly against:
-
-- conservative remapping,
-- finite-volume reconstruction,
-- Q2 finite elements,
-- EWA/elliptical footprint filtering,
-- edge-directed interpolation,
-- spline and reconstruction-filter methods.
-
-Only after that should novelty claims be considered.
+The initial review in [METHOD.md](METHOD.md#11-related-work-scope-and-novelty) identifies direct precedents in reconstruction filtering, exact-area biquadratic histosplines, conservative remapping, Active Flux reconstruction, edge-directed interpolation and signed Laplacian representations. Extend it with a systematic database search, citation chaining and a direct mathematical comparison of the reconstruction operators. The current review supports careful statements about similarities and differences, but not a claim of formal novelty.
 
 ## 18. Current interpretation
 
