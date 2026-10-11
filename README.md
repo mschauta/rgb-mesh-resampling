@@ -74,6 +74,22 @@ C' = C + (36/16) (P - A)
 
 No intermediate clamping is required; calculations are performed in floating-point linear light.
 
+### What the signed Z correction measures
+
+Define `Z = P - A`: the signed difference between the source pixel value and the raw mesh's exact cell average. Positive Z means that the raw cell average is too low in that channel; negative Z means it is too high. The centre displacement is `Δ = (9/4) Z`. Thus the correction's magnitude and sign follow from area conservation rather than from a chosen sharpening strength.
+
+For the initial nine-node Q2 construction, the residual has an exact discrete stencil on the interior source grid:
+
+```text
+           [  -3  -10   -3 ]
+Z = (1/144) [ -10   52  -10 ] * P
+           [  -3  -10   -3 ]
+```
+
+Here `*` denotes discrete convolution. This is a weighted negative discrete Laplacian: it vanishes on constants and interior affine ramps, and records signed curvature around transitions and thin features. Its low-frequency response is proportional to squared spatial frequency. Blur often weakens and spreads this response, so Z can carry measurable information about edge width and blur already present in the source. It does not by itself identify a blur kernel or recover a sharp image.
+
+[METHOD.md, sections 5.2–5.7](METHOD.md#52-signed-area-residual-centre-displacement-and-correction-field) derives the stencil, the continuous correction field, the frequency response and the assumptions behind the blur interpretation. [Section 10.1](METHOD.md#101-proposed-blur-estimation-experiments) proposes controlled experiments for testing blur estimation; these are research proposals, not validated estimator results.
+
 ## Resampling
 
 An output pixel is treated as an area footprint, not just a point.
@@ -181,6 +197,8 @@ Other options:
 `--zdiff` on the test chart (red: the calibration brightens, blue: it darkens):
 
 ![Z-calibration difference image of the rotated test chart](docs/images/zdiff_m13zf.png)
+
+The heat map shows the signed luminance difference after rendering the two fields. Each image is normalized separately and colour-mapped, so its displayed brightness is not a quantitative Z amplitude. Blur experiments should retain the unnormalized floating-point residual or rendered difference and compare them on a fixed scale; see [METHOD.md](METHOD.md#101-proposed-blur-estimation-experiments).
 
 Composing instead of re-rasterizing, on the test chart with `--rotate 30 --repeat 12`:
 

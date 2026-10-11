@@ -563,6 +563,10 @@ Investigate whether exact Q2 integration or a compact equivalent formulation can
 
 The initial review in [METHOD.md](METHOD.md#11-related-work-scope-and-novelty) identifies direct precedents in reconstruction filtering, exact-area biquadratic histosplines, conservative remapping, Active Flux reconstruction, edge-directed interpolation and signed Laplacian representations. Extend it with a systematic database search, citation chaining and a direct mathematical comparison of the reconstruction operators. The current review supports careful statements about similarities and differences, but not a claim of formal novelty.
 
+### 17.8 Test Z as a blur-sensitive diagnostic
+
+The initial nine-node area residual has an exact weighted negative-Laplacian stencil, derived in [METHOD.md, section 5.3](METHOD.md#53-exact-stencil-and-weighted-discrete-laplacian). Its relation to Gaussian and motion blur suggests controlled experiments with known PSFs, contrast, edge orientation, subpixel phase and noise; [section 10.1](METHOD.md#101-proposed-blur-estimation-experiments) specifies a proposed protocol. These experiments should distinguish the source-grid residual from the rendered calibrated-minus-raw field and use unnormalized floating-point values. The existing Laplacian correlations and transform-consistency results do not establish PSF identifiability or validate a blur estimator.
+
 ## 18. Current interpretation
 
 The most interesting result is not simply that one mesh variant obtains the lowest composite rank.

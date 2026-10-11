@@ -154,6 +154,155 @@ The purpose of Z calibration is therefore best described as **area conservation 
 
 A softer uncalibrated result can still be desirable as an aesthetic choice. The calibrated and uncalibrated fields should therefore be treated as two useful reconstruction modes rather than simply “correct” and “incorrect” versions.
 
+### 5.2 Signed area residual, centre displacement and correction field
+
+The following derivation follows the local construction implemented by `build_q2_lattice`, `q2_cell_means` and `z_correct_q2` in `rgbmesh/core.py`. Work in one linear-light channel; the equations apply independently to every premultiplied channel. Distinguish three quantities sometimes informally called “Z”:
+
+```text
+Z[i,j] = P[i,j] - A[i,j]                 signed cell-average residual
+Δ[i,j] = (36/16) Z[i,j] = (9/4) Z[i,j]  centre-node displacement
+D(ξ,η) = C_cal(ξ,η) - C_raw(ξ,η)        continuous correction field
+```
+
+Z is an area-average discrepancy, in the same units as the channel value. Multiplying it by the physical cell area gives the missing signed integral. It is not a nonnegative loss, a gradient magnitude or a measured amount of optical energy lost from the scene. Positive Z indicates an underestimated raw cell average; negative Z indicates an overestimated one.
+
+For the nine-node correction, only the centre basis coefficient changes, so within each cell
+
+```text
+D(ξ,η) = Δ (1 - ξ²)(1 - η²),    ξ,η ∈ [-1,1].
+```
+
+This bubble is zero on every cell boundary, equals Δ at the centre, and has cell average `(4/9) Δ = Z`. Consequently the corrected field is still continuous across shared boundaries, and its cell average is exactly `A + Z = P`. The corrected centre is generally no longer equal to the original point sample P. Area calibration replaces that centre interpolation condition with the prescribed cell average; it does not impose both conditions simultaneously.
+
+For any output footprint Ω, the calibrated-minus-raw output is the average of D over Ω. It equals Z when Ω is exactly one original source cell, as in identity area rendering of `m09z` minus `m09`. For rotated, translated or scaled footprints it is a different integral, potentially spanning several bubbles. The demo's `--zdiff` image visualizes a luminance projection of this rendered difference, not generally the source-grid Z array.
+
+### 5.3 Exact stencil and weighted discrete Laplacian
+
+For an interior source pixel, write `S_axis` for the sum of its four axial neighbours and `S_diag` for the sum of its four diagonal neighbours. Substituting the corner and edge rules of section 2 gives
+
+```text
+ΣV = P + (1/2) S_axis + (1/4) S_diag
+ΣE = (3/2) P + (1/2) S_axis + (1/8) S_diag
+A  = (92 P + 10 S_axis + 3 S_diag) / 144.
+```
+
+Thus the raw mesh's source-cell averages are a discrete smoothing of P, with positive unit-sum kernel K, and the signed residual is `Z = (I - K) P`:
+
+```text
+           [  3   10    3 ]
+K = (1/144) [ 10   92   10 ]
+           [  3   10    3 ]
+
+               [  -3  -10   -3 ]
+I - K = (1/144) [ -10   52  -10 ]
+               [  -3  -10   -3 ]
+```
+
+To make the Laplacian sign convention explicit, define
+
+```text
+L_axis P = S_axis - 4 P
+L_diag P = S_diag - 4 P
+L_w P    = (10 L_axis P + 3 L_diag P) / 16.
+
+Z = -(1/9) L_w P
+Δ = -(1/4) L_w P.
+```
+
+`L_w` is a weighted nine-point discrete Laplacian. For samples of a smooth field p on a square grid of pitch a, Taylor expansion gives
+
+```text
+L_w P = a² ∇²p + O(a⁴)
+Z     = -(a²/9) ∇²p + O(a⁴)
+Δ     = -(a²/4) ∇²p + O(a⁴).
+```
+
+The remainder assumes bounded fourth derivatives. Constants and affine ramps have exactly zero interior residual; a nonzero constant slope alone does not create Z. Curvature, including the changes of slope at an edge's shoulders, creates its signed lobes. Bright local peaks typically have positive Z and dark troughs negative Z. A broad linear ramp can have zero Z through most of its interior even though it has a nonzero gradient.
+
+The stencil is exact for the initial nine-node construction, not a fit to the benchmark's Laplacian correlations. The code uses edge-replicated padding: the same stencil can be evaluated on that extended raster, but the extension breaks an affine ramp and translation invariance at the image boundary. Statements about affine cancellation, convolution and Fourier response therefore refer to the interior, an infinite lattice, or an explicitly periodic experiment. Constant cancellation still holds at the borders.
+
+These coefficients must not be assumed for every final-grid variant. The uncalibrated 25-node Q2 subdivision represents the same field and has the same original-cell residual, but final calibration distributes corrections over subcell bubbles. The 13- and 41-node fans have different raw cell averages and different correction shapes. Their residual operators require their own derivations. The rendered difference fields in RESULTS.md also include the transform and output integration, which explains why their measured correlation with a conventional Laplacian need not be one.
+
+### 5.4 Frequency response
+
+On an infinite or periodic source lattice, let `ωx,ωy ∈ [-π,π]` denote angular spatial frequencies in radians per source pixel. A hat denotes the discrete Fourier transform. The preceding stencils give the exact symbols
+
+```text
+K_hat(ωx,ωy) = (92 + 20 cos ωx + 20 cos ωy + 12 cos ωx cos ωy) / 144
+G_Z(ωx,ωy)   = 1 - K_hat
+               = (13 - 5 cos ωx - 5 cos ωy - 3 cos ωx cos ωy) / 36
+Z_hat         = G_Z P_hat.
+```
+
+`G_Z` is real and even. It is zero at DC and positive at every other frequency, with range `[0,5/9]`. Its values at axial and diagonal Nyquist are `G_Z(π,0) = 4/9` and `G_Z(π,π) = 5/9`. Near DC,
+
+```text
+G_Z = (ωx² + ωy²)/9 + O(||ω||⁴).
+```
+
+This is an isotropic negative-Laplacian response to leading order, with square-grid directional dependence at higher frequencies. The centre displacement has response `(9/4) G_Z`; the full continuous field and its rendered outputs also depend on the bubble basis and footprint integration. In particular, `(9/4) G_Z` is not the frequency response of the complete resampler.
+
+At identity, the raw cell-average operator is K and the calibrated cell-average operator is `K + G_Z = I`. Calibration compensates the averaging discrepancy introduced by this reconstruction. It does not invert an optical or motion-blur transfer function already present in P.
+
+### 5.5 Relation to pre-existing blur
+
+Suppose a discrete, spatially invariant blur model is appropriate on the same grid:
+
+```text
+B = h * S + n,
+```
+
+where S is a sharp reference raster, h is a normalized point-spread function (PSF), n is additive noise and `*` is convolution. Since `L_Z = I - K` is a fixed convolution operator,
+
+```text
+Z_B     = L_Z B = h * Z_S + L_Z n
+Z_B_hat = G_Z H S_hat + G_Z n_hat.
+```
+
+This commutation is exact for infinite/periodic discrete convolutions, or where finite-image boundary handling does not interfere. A continuous optical-blur model followed by sampling needs its own forward model: aliasing can prevent it from being represented by a single discrete h. Clipping, gamma-space processing and spatially varying PSFs also invalidate the simple identity.
+
+For a nonnegative unit-sum discrete PSF, `|H| ≤ 1`. It attenuates the spectral magnitude of the noise-free Z signal wherever `|H| < 1`; total squared residual energy cannot increase under periodic convolution. Individual lobes or local statistics need not decrease monotonically. Noise can raise the measured energy, and motion-blur transfer functions have zeros and side lobes.
+
+In a continuous, adequately sampled approximation, isotropic Gaussian blur of standard deviation σ pixels has `H(ω) = exp(-σ² ||ω||²/2)`. It therefore suppresses the high-frequency content to which Z responds. A centred uniform straight-line motion of total displacement vector d pixels instead has
+
+```text
+H(ω) = sinc((ω · d)/2),    sinc(q) = sin(q)/q,    sinc(0) = 1.
+```
+
+Its effect is directional: an ideal straight edge whose normal is perpendicular to d has no motion-induced broadening. A discrete experiment should use the transfer function of its actual discretized PSF; the continuous Gaussian and sinc expressions are forward-model approximations to that experiment.
+
+For uniform translational motion of a static scene, reversing d gives the same centred PSF and the same Z response. The sharp image can also be translated together with a corresponding change of PSF origin without changing the observed blur. An exposure-midpoint sharp reference fixes this registration convention; it does not identify the direction of time or make that frame uniquely recoverable. Parallax, occlusion, nonuniform motion and rolling shutter require a richer model.
+
+### 5.6 A measurable example: Gaussian-blurred step edges
+
+For a straight rising edge, let u be physical distance along its normal, a the pixel pitch, c the signed contrast and b the background. A Gaussian-smoothed step with physical standard deviation σ is
+
+```text
+pσ(u) = b + c Φ(u/σ),
+```
+
+where Φ is the standard normal cumulative distribution function. In the well-sampled regime `σ >> a`, the Taylor approximation in section 5.3 predicts
+
+```text
+Z(u) ≈ - (a²/9) pσ''(u)
+     = c a² u exp(-u²/(2σ²)) / (9 sqrt(2π) σ³).
+
+lobe positions       ≈ -σ, +σ
+lobe separation      ≈ 2σ
+max |Z|              ≈ |c| a² exp(-1/2) / (9 sqrt(2π) σ²)
+10–90% edge width    = 2 Φ^(-1)(0.9) σ ≈ 2.5631 σ.
+```
+
+The positive and negative lobes describe signed curvature on the bright and dark sides; they are not two different blur components. For fixed contrast, a wider Gaussian transition has weaker, more widely separated lobes. Replacing Z by Δ multiplies amplitude by `9/4` without changing these positions.
+
+These are asymptotic predictions for an isolated Gaussian edge, not a universal blur calibration. Near one-pixel widths, phase, angle and the exact stencil matter. Fit the exact discrete residual of a sampled forward edge instead of substituting the continuum lobe formula. If the sensor measures pixel-area averages, include that aperture integration before sampling; an inferred edge width then combines optical blur, motion, sensor aperture and any prior processing. It should not automatically be labelled optical σ.
+
+### 5.7 What Z can and cannot identify
+
+Z can support blur-sensitive measurements, but its amplitude alone cannot determine a PSF. Low contrast, a smooth sharp scene, fewer edges, texture orientation and stronger blur can all produce small residual energy. Noise, demosaicing, compression, sharpening and quantization can produce large residuals without corresponding sharp scene detail. A single edge measures only the blur projected onto its normal; multiple orientations are needed to investigate anisotropic motion.
+
+Z is a deterministic linear transform of the source raster. It adds no independent observation: its zero DC response discards the constant component, while its nonzero-frequency response reweights information already present in P. It can be a useful diagnostic or a feature for an estimator under stated scene/PSF/noise assumptions, but it cannot resolve general blind-deconvolution ambiguity. Source-area calibration preserves the measured blurred values just as exactly as it preserves sharp ones. Estimating and undoing physical blur would be a separate inverse problem.
+
 ## 6. Transformation and output sampling
 
 The reconstructed field is independent of the output pixel grid.
@@ -219,6 +368,31 @@ Useful measurements include:
 - positional and shape deformation;
 - angular/grid-dependent modulation;
 - cumulative and round-trip resampling error.
+
+### 10.1 Proposed blur-estimation experiments
+
+The following experiments test the predictions above. They are proposed extensions to the existing benchmark, not completed measurements or a validated blur estimator.
+
+1. **Verify the operator before estimating blur.** On float64 random rasters, compare `P - q2_cell_means(build_q2_lattice(P))` with the stencil in section 5.3, using the same edge extension. Check constant and interior affine cancellation, exact corrected cell averages, and sinusoidal gain against `G_Z`. Compare `m09z - m09` under identity area rendering with Z. Derive and verify the raw residual operators separately before using final-grid fan variants.
+2. **Generate controlled forward data.** Start with analytic steps, thin lines, sinusoidal gratings, corners and textured scenes. Sweep Gaussian widths (for example 0, 0.5, 1, 2, 4 pixels), motion lengths (0, 1, 2, 4, 8 pixels) and motion angles. Independently vary contrast, edge normal, subpixel phase and noise. For physical tests, blur the continuous or sufficiently oversampled scene, integrate a known sensor aperture and then sample. Establish convergence of that reference rather than using a resampler as ground truth. Keep noiseless linear data as a baseline before adding sRGB quantization, compression or sharpening.
+3. **Measure the signed response.** Retain Z in floating point per channel or use a fixed linear luminance projection. Record contrast-normalized peak magnitude, lobe separation, sign/zero-crossing locations, spatial spectra and residual energy per fixed region or edge length. Compare edge-width estimates with the known Gaussian parameters and the asymptotic formulas of section 5.6. Fit exact forward-model residual profiles when sampling is coarse; vary edge phase and angle to quantify grid bias. A scale-normalized multiscale Laplacian-of-Gaussian baseline and a direct edge-profile fit help test whether Z offers useful estimation behaviour beyond established measurements [10].
+4. **Separate reference-based and blind estimation.** With a registered sharp S, test `Z_B ≈ hθ * Z_S` and fit PSF parameters θ using a specified noise-weighted error. In the noiseless periodic case, `Z_B_hat / Z_S_hat = H` wherever the denominator is nonzero. Omit DC and weak spectral bins: division there is unstable, and Z does not add information compared with the corresponding B/S ratio. Without S, restrict the scene model explicitly, for example to isolated step edges with fitted contrast and position, and compare against edge-profile fits. For motion estimation combine edges of several normals and report orientation modulo 180°, not a recovered time direction.
+5. **Control confounds and generalization.** Fit or normalize contrast locally; avoid dividing by nearly zero contrast. Measure the noise response separately. For white independent channel noise of variance τ², the nine-node stencil predicts `Var(Z_n) = τ² (52² + 4·10² + 4·3²) / 144² = (785/5184) τ²`; adjacent residuals are correlated. Mask image/alpha boundaries and exclude margins covering both the PSF and stencil support, or use a declared periodic model. Hold out scenes, phases, contrasts, noise levels and PSF families; report parameter bias, absolute error, uncertainty and failures on textureless regions. Test sensitivity to sensor aperture and spatially varying blur separately.
+6. **Keep visualization separate from measurement.** Compare calibrated and raw fields using identical transforms and footprints. Record their unnormalized rendered differences separately from source-grid Z. The current demo normalizes each `--zdiff` luminance image by its own 99.5th percentile and applies a nonlinear colour map, so those PNGs cannot compare absolute amplitudes across blur levels. Use a common display scale for inspection and floating arrays for statistics. Report footprint size and method because output integration changes the measured response.
+
+The source-grid diagnostic can be computed with the existing implementation; no estimator API is implied:
+
+```python
+import numpy as np
+from rgbmesh.core import build_q2_lattice, q2_cell_means
+
+# P: (height, width, channels), linear light, premultiplied if RGBA.
+P = np.asarray(P, dtype=np.float64)
+Z = P - q2_cell_means(build_q2_lattice(P))
+delta = (9.0 / 4.0) * Z
+```
+
+This uses the implementation's edge replication. Perform spectral analysis on a suitable interior region or an explicitly periodic construction; retain the original signed values rather than normalizing each array independently.
 
 ## 11. Related work, scope and novelty
 
