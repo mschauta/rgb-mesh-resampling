@@ -90,6 +90,8 @@ Here `*` denotes discrete convolution. This is a weighted negative discrete Lapl
 
 [METHOD.md, sections 5.2–5.7](METHOD.md#52-signed-area-residual-centre-displacement-and-correction-field) derives the stencil, the continuous correction field, the frequency response and the assumptions behind the blur interpretation. [Section 10.1](METHOD.md#101-proposed-blur-estimation-experiments) proposes controlled experiments for testing blur estimation; these are research proposals, not validated estimator results.
 
+There is also empirical support: in the companion [Frame Blur Detection](https://github.com/mschauta/frame-blur-detection) study, a processed signed luminance residual derived from this same kernel supports blur classification as the sole image channel, alongside a validity mask. Its epoch-99 frame AUC is 0.949 on validation and 0.948 on a separate seven-video-group test, close to the RGB and grayscale runs on that material. This demonstrates that the signed edge representation carries usable blur-related information under the evaluated protocol. [Section 5.8](METHOD.md#58-empirical-evidence-from-frame-blur-detection) describes the evidence and its scope, including the rounded input, teacher-derived labels and the still-missing unsigned-residual control.
+
 ## Resampling
 
 An output pixel is treated as an area footprint, not just a point.

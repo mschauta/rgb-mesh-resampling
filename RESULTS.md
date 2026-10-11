@@ -567,6 +567,8 @@ The initial review in [METHOD.md](METHOD.md#11-related-work-scope-and-novelty) i
 
 The initial nine-node area residual has an exact weighted negative-Laplacian stencil, derived in [METHOD.md, section 5.3](METHOD.md#53-exact-stencil-and-weighted-discrete-laplacian). Its relation to Gaussian and motion blur suggests controlled experiments with known PSFs, contrast, edge orientation, subpixel phase and noise; [section 10.1](METHOD.md#101-proposed-blur-estimation-experiments) specifies a proposed protocol. These experiments should distinguish the source-grid residual from the rendered calibrated-minus-raw field and use unnormalized floating-point values. The existing Laplacian correlations and transform-consistency results do not establish PSF identifiability or validate a blur estimator.
 
+Related empirical evidence is already available from the companion [Frame Blur Detection](https://github.com/mschauta/frame-blur-detection) study: its processed signed mesh residual supports frame-level blur classification, with epoch-99 AUC 0.949 on validation and 0.948 on a separate seven-group test. These are results of a different experiment, not rows of the resampling benchmark above. [METHOD.md, section 5.8](METHOD.md#58-empirical-evidence-from-frame-blur-detection) connects that evidence to Z and records the supervision, numerical-processing and ablation limits. It supports the claim that the signed edge representation carries usable blur-related patterns; estimating blur extent or a PSF remains a separate research step.
+
 ## 18. Current interpretation
 
 The most interesting result is not simply that one mesh variant obtains the lowest composite rank.

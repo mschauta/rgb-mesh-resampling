@@ -303,6 +303,28 @@ Z can support blur-sensitive measurements, but its amplitude alone cannot determ
 
 Z is a deterministic linear transform of the source raster. It adds no independent observation: its zero DC response discards the constant component, while its nonzero-frequency response reweights information already present in P. It can be a useful diagnostic or a feature for an estimator under stated scene/PSF/noise assumptions, but it cannot resolve general blind-deconvolution ambiguity. Source-area calibration preserves the measured blurred values just as exactly as it preserves sharp ones. Estimating and undoing physical blur would be a separate inverse problem.
 
+### 5.8 Empirical evidence from Frame Blur Detection
+
+The companion [Frame Blur Detection](https://github.com/mschauta/frame-blur-detection) experiments provide empirical evidence that the signed edge representation carries blur-related spatial patterns useful for discrimination. The connection is explicit: [its input construction](https://github.com/mschauta/frame-blur-detection/blob/0d7d89cada548449cc8720134464746a12d87440/METHOD.md#7-model-input) uses this same nine-node raw area kernel, `K = [3 10 3; 10 92 10; 3 10 3] / 144`, on linear-light luminance Y. In ideal arithmetic its residual is
+
+```text
+d = Y - K * Y = 0.2126 Z_R + 0.7152 Z_G + 0.0722 Z_blue.
+```
+
+Here `Z_R`, `Z_G` and `Z_blue` denote the source-grid residuals of the three colour channels, not transformed output differences. Visual inspection in that study reports widening edges and, for suitable motion and scene structures, repeated contours and positive/negative bands as blur increases. This is consistent with the curvature and blur-filtering account above; the observed geometry depends on the scene and PSF.
+
+The learned comparison uses RGB, grayscale or the processed signed residual as the image input, with a validity mask in every case. The [reported epoch-99 results](https://github.com/mschauta/frame-blur-detection/blob/0d7d89cada548449cc8720134464746a12d87440/README.md#results-validation-100-epochs) and [separate seven-group internal test](https://github.com/mschauta/frame-blur-detection/blob/0d7d89cada548449cc8720134464746a12d87440/reproduction/heldout/RESULTS.md#primary-results) give:
+
+| Image input | Validation frame AUC | Seven-group test frame AUC |
+|---|---:|---:|
+| RGB | 0.952 | 0.952 |
+| Grayscale | 0.942 | 0.953 |
+| Signed edge fingerprint | 0.949 | 0.948 |
+
+Validation contains 6,602 frames from 11 video groups; the separate test contains 6,592 frames from seven groups. Native-frame labels are filtered labels from a frozen VLM teacher, so these figures measure teacher-reference discrimination. For the fingerprint test AUC, the reported conditional video-group bootstrap 95% interval is `[0.919, 0.956]`. One training run per input and the narrow, imbalanced video cohort limit generalization; similar point estimates do not establish statistical equivalence.
+
+The demonstrated result is that the **published processed signed residual carries enough blur-related information to support detection on the evaluated material**, at a level close to the full-image runs. The actual convolution is bfloat16-rounded, followed by per-image 99.5th-percentile normalization on a valid-pixel subgrid (floor `10^-3`) and signed square-root companding; the model therefore does not receive the exact floating-point Z defined in section 5.3. An unsigned-residual ablation is still needed to isolate the benefit of retaining sign, and an exact-float32 control is needed to isolate rounding. The experiment does not identify the model's particular cues, recover a PSF or validate universal blur detection. Quantitative blur-width and PSF estimation in section 10.1 remain proposed experiments, distinct from this completed classification evidence.
+
 ## 6. Transformation and output sampling
 
 The reconstructed field is independent of the output pixel grid.
@@ -372,6 +394,8 @@ Useful measurements include:
 ### 10.1 Proposed blur-estimation experiments
 
 The following experiments test the predictions above. They are proposed extensions to the existing benchmark, not completed measurements or a validated blur estimator.
+
+The completed companion classification study in [section 5.8](#58-empirical-evidence-from-frame-blur-detection) already supports the usefulness of the signed residual for blur discrimination. The experiments here ask the additional question of whether specified blur parameters can be measured or estimated from it.
 
 1. **Verify the operator before estimating blur.** On float64 random rasters, compare `P - q2_cell_means(build_q2_lattice(P))` with the stencil in section 5.3, using the same edge extension. Check constant and interior affine cancellation, exact corrected cell averages, and sinusoidal gain against `G_Z`. Compare `m09z - m09` under identity area rendering with Z. Derive and verify the raw residual operators separately before using final-grid fan variants.
 2. **Generate controlled forward data.** Start with analytic steps, thin lines, sinusoidal gratings, corners and textured scenes. Sweep Gaussian widths (for example 0, 0.5, 1, 2, 4 pixels), motion lengths (0, 1, 2, 4, 8 pixels) and motion angles. Independently vary contrast, edge normal, subpixel phase and noise. For physical tests, blur the continuous or sufficiently oversampled scene, integrate a known sensor aperture and then sample. Establish convergence of that reference rather than using a resampler as ground truth. Keep noiseless linear data as a baseline before adding sRGB quantization, compression or sharpening.
